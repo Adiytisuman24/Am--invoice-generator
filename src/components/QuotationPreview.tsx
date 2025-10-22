@@ -384,7 +384,7 @@ export default function QuotationPreview({
 
         <div className="mt-4 pt-2 border-t border-gray-300 flex justify-between items-center">
           <p className="italic text-gray-500" style={{ fontSize: '8pt' }}>
-            Powered by Grapepaylabs
+            Powered by AllManiac Billing System
           </p>
           {websiteUrl && (
             <a
