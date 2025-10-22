@@ -326,7 +326,7 @@ function App() {
           <div className="flex items-center gap-3">
             <FileText className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Circle Quotation Generator</h1>
+              <h1 className="text-xl font-bold text-gray-900">AllManiac Invoice/Quotation Generator</h1>
               <p className="text-sm text-gray-500">
                 Create professional A4 quotations with UPI payments
                 {lastSaved && <span className="ml-2 text-green-600">• {formatLastSaved()}</span>}
