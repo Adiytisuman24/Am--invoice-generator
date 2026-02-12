@@ -2,7 +2,7 @@ import { BusinessInfoType, QuotationItemType, BankDetailsType } from '../lib/sup
 import { calculateItemGST, calculateQuotationTotals, numberToWords, formatCurrency } from '../utils/calculations';
 import { currencies } from '../data/locations';
 import PaymentCard from './PaymentCard';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { saveSettingsToCookie, loadSettingsFromCookie } from '../utils/cookieStorage';
 
 interface QuotationPreviewProps {
@@ -54,6 +54,65 @@ export default function QuotationPreview({
   advancePayment = 0,
   onLogoSizeChange
 }: QuotationPreviewProps) {
+  const [endless, setEndless] = useState(false);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+
+  // A4 page height in pixels (approx at 96 DPI): 297mm
+  const A4_PX = 297 * 3.78; // ~1122px
+
+  const exportLongPdf = async () => {
+    const el = previewRef.current;
+    if (!el) return;
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      // render at higher scale for better fidelity
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: -window.scrollY });
+      const imgData = canvas.toDataURL('image/png');
+
+      // create a single-page PDF with dimensions matching the canvas
+      const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`${quotationNo || 'document'}.pdf`);
+    } catch (err) {
+      console.error('Export PDF failed', err);
+      alert('Export failed. Check console for details.');
+    }
+  };
+
+  // Measure content height and auto-toggle endless vs A4
+  useLayoutEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      // full scrollHeight of preview content
+      const h = el.scrollHeight;
+      setContentHeight(h);
+
+      // Auto decide: if there are 1-2 items and content fits A4, use A4; otherwise use endless
+      if ((items.length <= 2) && h <= A4_PX) {
+        setEndless(false);
+      } else {
+        setEndless(true);
+      }
+    };
+
+    // measure initially and after a short delay to account for images/fonts
+    measure();
+    const t = setTimeout(measure, 300);
+
+    // observe size changes
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+    };
+  }, [items.length]);
   const [logoSize, setLogoSize] = useState(() => {
     const settings = loadSettingsFromCookie();
     return settings?.logoSize || 120;
@@ -127,15 +186,19 @@ export default function QuotationPreview({
     <div
       className="bg-white print:shadow-none border border-gray-200 print:border-0"
       id="quotation-preview"
+      ref={previewRef}
       style={{
         width: '100%',
-        maxWidth: '210mm',
-        minHeight: '297mm',
+        maxWidth: endless ? 'none' : '210mm',
+        // When endless, size to content to avoid blanks. Otherwise use A4 dimensions.
+        minHeight: endless
+          ? (contentHeight ? contentHeight + 'px' : Math.max(1200, items.length * 48) + 'px')
+          : '297mm',
         margin: '0 auto',
         padding: '12mm',
         boxSizing: 'border-box',
         overflow: 'visible',
-        transform: 'scale(0.95)',
+        transform: endless ? 'none' : 'scale(0.95)',
         transformOrigin: 'top center',
         backgroundColor: 'white'
       }}
@@ -144,6 +207,13 @@ export default function QuotationPreview({
         className="flex flex-col h-full"
       >
         <div className="flex justify-between items-start mb-2 pb-2 border-b-2 border-gray-300">
+          <div style={{ position: 'absolute', right: 14, top: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <input type="checkbox" checked={endless} onChange={() => setEndless(v => !v)} />
+              <span>Endless scroll preview</span>
+            </label>
+            <button onClick={exportLongPdf} className="px-3 py-1 bg-blue-600 text-white rounded text-sm" title="Export a single long PDF of the preview">Save long PDF</button>
+          </div>
           {companyLogoUrl ? (
             <div
               ref={logoRef}
