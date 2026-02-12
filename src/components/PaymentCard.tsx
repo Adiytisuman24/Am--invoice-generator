@@ -27,8 +27,9 @@ export default function PaymentCard({
   // Use current origin for the link to ensure it works locally and in production
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://grapepay.in';
   
-  // Update path to match new base URL
-  const basePath = import.meta.env.PROD ? '/billing/quotation' : '';
+  // Use optional VITE_BASE_PATH (set in environment) otherwise default to root
+  const rawBase = import.meta.env.VITE_BASE_PATH ?? '';
+  const basePath = rawBase ? (rawBase.startsWith('/') ? rawBase : `/${rawBase}`) : '';
   const trackingUrl = `${origin}${basePath}/${quotationNo}`;
 
   const upiUrl = upiId
