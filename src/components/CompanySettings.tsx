@@ -1,6 +1,6 @@
 import { Upload, Save, ArrowLeft } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+// import { supabase } from '../lib/supabase';
 import { saveSettingsToCookie, loadSettingsFromCookie } from '../utils/cookieStorage';
 
 interface CompanySettingsProps {
@@ -20,12 +20,8 @@ export default function CompanySettings({ onSave, onBack }: CompanySettingsProps
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+    // Only load from cookie/localStorage
     const cookieSettings = loadSettingsFromCookie();
-
     if (cookieSettings) {
       setCompanyName(cookieSettings.companyName);
       setLogoUrl(cookieSettings.logoUrl);
@@ -33,30 +29,7 @@ export default function CompanySettings({ onSave, onBack }: CompanySettingsProps
       setPhone(cookieSettings.phone);
       setWebsiteUrl(cookieSettings.websiteUrl);
     }
-
-    const { data } = await supabase
-      .from('company_settings')
-      .select('*')
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (data) {
-      setSettingsId(data.id);
-      setCompanyName(data.company_name || '');
-      setLogoUrl(data.logo_url || '');
-      setFromAddress(data.from_address || '');
-      setPhone(data.phone || '');
-      setWebsiteUrl(data.website_url || '');
-
-      saveSettingsToCookie({
-        companyName: data.company_name || '',
-        logoUrl: data.logo_url || '',
-        fromAddress: data.from_address || '',
-        phone: data.phone || '',
-        websiteUrl: data.website_url || '',
-      });
-    }
-  };
+  }, []);
 
   const handleLogoUpload = (file: File) => {
     const reader = new FileReader();
@@ -74,9 +47,8 @@ export default function CompanySettings({ onSave, onBack }: CompanySettingsProps
     return `Saved ${Math.floor(seconds / 60)}m ago`;
   };
 
-  const autoSave = useCallback(async () => {
+  const autoSave = useCallback(() => {
     if (isSaving) return;
-
     setIsSaving(true);
     try {
       const settingsData = {
@@ -86,40 +58,7 @@ export default function CompanySettings({ onSave, onBack }: CompanySettingsProps
         phone,
         websiteUrl,
       };
-
       saveSettingsToCookie(settingsData);
-
-      if (settingsId) {
-        await supabase
-          .from('company_settings')
-          .update({
-            company_name: companyName,
-            logo_url: logoUrl,
-            from_address: fromAddress,
-            phone: phone,
-            website_url: websiteUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', settingsId);
-      } else {
-        const { data } = await supabase
-          .from('company_settings')
-          .insert({
-            company_name: companyName,
-            logo_url: logoUrl,
-            from_address: fromAddress,
-            phone: phone,
-            website_url: websiteUrl,
-            is_active: true
-          })
-          .select()
-          .maybeSingle();
-
-        if (data) {
-          setSettingsId(data.id);
-        }
-      }
-
       setLastSaved(new Date());
       onSave();
     } catch (error) {
@@ -127,7 +66,7 @@ export default function CompanySettings({ onSave, onBack }: CompanySettingsProps
     } finally {
       setIsSaving(false);
     }
-  }, [companyName, logoUrl, fromAddress, phone, websiteUrl, settingsId, isSaving, onSave]);
+  }, [companyName, logoUrl, fromAddress, phone, websiteUrl, isSaving, onSave]);
 
   const debouncedAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) {
