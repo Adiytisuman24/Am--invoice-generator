@@ -5,13 +5,11 @@ import App from './App.tsx';
 import InvoiceViewer from './pages/InvoiceViewer.tsx';
 import './index.css';
 
-// Use a configurable base path in production via `VITE_BASE_PATH` (falls back to '/')
-// This keeps local dev working while allowing deployments under a subpath.
-const BASE_PATH = import.meta.env.PROD ? (import.meta.env.VITE_BASE_PATH ?? '/') : '/';
-
+// Do not set a Router basename by default — this avoids deployment mismatches
+// caused by an incorrect `VITE_BASE_PATH` environment variable.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename={BASE_PATH}>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/:id" element={<InvoiceViewer />} />
