@@ -24,13 +24,9 @@ export default function PaymentCard({
   advancePayment = 0
 }: PaymentCardProps) {
   const displayAmount = advancePayment > 0 ? advancePayment : amount;
-  // Use current origin for the link to ensure it works locally and in production
+  // Always use root path for tracking URL
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://grapepay.in';
-  
-  // Use optional VITE_BASE_PATH (set in environment) otherwise default to root
-  const rawBase = import.meta.env.VITE_BASE_PATH ?? '';
-  const basePath = rawBase ? (rawBase.startsWith('/') ? rawBase : `/${rawBase}`) : '';
-  const trackingUrl = `${origin}${basePath}/${quotationNo}`;
+  const trackingUrl = `${origin}/${quotationNo}`;
 
   const upiUrl = upiId
     ? generateUPIUrl({
