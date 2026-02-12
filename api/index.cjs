@@ -1,8 +1,5 @@
-// Simple Node serverless API replacing the previous PHP endpoint.
-// Reads DB credentials from environment variables: DB_HOST, DB_USER, DB_PASS, DB_NAME
-// Usage: POST JSON { table, action, ... } where action is 'select'|'insert'|'update'|'delete'
-
-import mysql from 'mysql2/promise';
+// CommonJS serverless handler for Vercel compatibility
+const mysql = require('mysql2/promise');
 
 const ALLOWED_TABLES = ['quotations', 'business_info', 'quotation_items', 'terms_conditions', 'company_settings'];
 
@@ -31,8 +28,7 @@ function sendJSON(res, obj, status = 200) {
   return res.end(JSON.stringify(obj));
 }
 
-export default async (req, res) => {
-  // CORS for Vercel / local
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -70,16 +66,16 @@ export default async (req, res) => {
           let where = '1=1';
           const params = [];
           if (body.match && typeof body.match === 'object') {
-            for (const [k, v] of Object.entries(body.match)) {
-              where += ` AND \`${k}\` = ?`;
-              params.push(v);
+            for (const k of Object.keys(body.match)) {
+              where += " AND `" + k + "` = ?";
+              params.push(body.match[k]);
             }
           }
-          let sql = `SELECT * FROM \`${table}\` WHERE ${where}`;
+          let sql = 'SELECT * FROM `' + table + '` WHERE ' + where;
           if (body.order) {
             const col = body.order.column;
             const dir = body.order.ascending ? 'ASC' : 'DESC';
-            sql += ` ORDER BY \`${col}\` ${dir}`;
+            sql += ' ORDER BY `' + col + '` ' + dir;
           }
           if (body.limit) sql += ' LIMIT ?';
           if (body.limit) params.push(parseInt(body.limit, 10));
@@ -94,10 +90,10 @@ export default async (req, res) => {
           const rows = Array.isArray(data) ? data : [data];
           let lastId = null;
           for (const row of rows) {
-            const cols = Object.keys(row).map(k => `\`${k}\``).join(',');
+            const cols = Object.keys(row).map(k => '`' + k + '`').join(',');
             const placeholders = Object.keys(row).map(() => '?').join(',');
-            const vals = Object.values(row).map(v => Array.isArray(v) || typeof v === 'object' ? JSON.stringify(v) : v);
-            const sql = `INSERT INTO \`${table}\` (${cols}) VALUES (${placeholders})`;
+            const vals = Object.values(row).map(v => (Array.isArray(v) || typeof v === 'object') ? JSON.stringify(v) : v);
+            const sql = 'INSERT INTO `' + table + '` (' + cols + ') VALUES (' + placeholders + ')';
             const [resu] = await conn.query(sql, vals);
             lastId = resu.insertId || lastId;
           }
@@ -110,16 +106,17 @@ export default async (req, res) => {
           if (!data || !match) return sendJSON(res, { data: null, error: 'Missing data or match' }, 400);
           const sets = [];
           const params = [];
-          for (const [k, v] of Object.entries(data)) {
-            sets.push(`\`${k}\` = ?`);
-            params.push(Array.isArray(v) || typeof v === 'object' ? JSON.stringify(v) : v);
+          for (const k of Object.keys(data)) {
+            sets.push('`' + k + '` = ?');
+            const v = data[k];
+            params.push((Array.isArray(v) || typeof v === 'object') ? JSON.stringify(v) : v);
           }
           const where = [];
-          for (const [k, v] of Object.entries(match)) {
-            where.push(`\`${k}\` = ?`);
-            params.push(v);
+          for (const k of Object.keys(match)) {
+            where.push('`' + k + '` = ?');
+            params.push(match[k]);
           }
-          const sql = `UPDATE \`${table}\` SET ${sets.join(', ')} WHERE ${where.join(' AND ')}`;
+          const sql = 'UPDATE `' + table + '` SET ' + sets.join(', ') + ' WHERE ' + where.join(' AND ');
           await conn.query(sql, params);
           return sendJSON(res, { data: null, error: null });
         }
@@ -129,11 +126,11 @@ export default async (req, res) => {
           if (!match) return sendJSON(res, { data: null, error: 'Missing match' }, 400);
           const where = [];
           const params = [];
-          for (const [k, v] of Object.entries(match)) {
-            where.push(`\`${k}\` = ?`);
-            params.push(v);
+          for (const k of Object.keys(match)) {
+            where.push('`' + k + '` = ?');
+            params.push(match[k]);
           }
-          const sql = `DELETE FROM \`${table}\` WHERE ${where.join(' AND ')}`;
+          const sql = 'DELETE FROM `' + table + '` WHERE ' + where.join(' AND ');
           await conn.query(sql, params);
           return sendJSON(res, { data: null, error: null });
         }
