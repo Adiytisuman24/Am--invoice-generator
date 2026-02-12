@@ -4,16 +4,18 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
 import InvoiceViewer from './pages/InvoiceViewer.tsx';
 import './index.css';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Do not set a Router basename by default — this avoids deployment mismatches
-// caused by an incorrect `VITE_BASE_PATH` environment variable.
+// Wrap the app in an ErrorBoundary so runtime errors show a friendly message
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/:id" element={<InvoiceViewer />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/:id" element={<InvoiceViewer />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>
 );

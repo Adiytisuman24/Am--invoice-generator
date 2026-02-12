@@ -14,3 +14,21 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+    <script>
+      // Global fallback UI when the module script fails or runtime errors occur
+      function showFallback() {
+        try {
+          var root = document.getElementById('root');
+          if (root) root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;padding:24px"><div style="background:white;padding:20px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06);text-align:center"><h2 style="margin:0 0 8px;font-size:18px">App failed to load</h2><p style="margin:0;color:#6b7280">Check the browser console or try again later.</p></div></div>';
+        } catch (e) { /* ignore */ }
+      }
+      window.addEventListener('error', showFallback);
+      window.addEventListener('unhandledrejection', showFallback);
+      // If module script fails to load, show fallback after a short timeout
+      setTimeout(function(){
+        var scripts = document.querySelectorAll('script[type="module"]');
+        var ok = false;
+        for(var i=0;i<scripts.length;i++){ if(scripts[i].dataset && scripts[i].dataset.loaded==='1') ok = true; }
+        if(!ok) showFallback();
+      }, 3000);
+    </script>
